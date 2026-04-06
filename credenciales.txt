@@ -1,0 +1,13 @@
+# Credenciales de Demostración - HAV Portal
+
+## Super Admin
+- Correo: admin@hav.edu.ve
+- Contraseña: admin123
+
+## Recepción
+- Correo: recepcion@hav.edu.ve
+- Contraseña: recepcion123
+
+## Médico
+- Correo: medico@hav.edu.ve
+- Contraseña: medico123
