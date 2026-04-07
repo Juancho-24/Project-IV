@@ -1,4 +1,4 @@
-# Acerca de este Proyecto (About this Project)
+# Acerca de este Proyecto
 
 ## Lenguajes de Programación y Tecnologías Utilizadas
 Este proyecto es una aplicación web Frontend dinámica (SPAs) desarrollada con el framework de React. Los lenguajes y tecnologías principales utilizados son:
