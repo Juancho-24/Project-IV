@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -14,33 +14,36 @@ import MedicoDashboard from './views/medico/MedicoDashboard';
 import PatientsView from './views/shared/PatientsView';
 import CalendarView from './views/shared/CalendarView';
 
+// Global mock data (single source of truth)
+import { PATIENTS, APPOINTMENTS, STAFF } from './data/mockData';
+
 // ─── Router Helper ──────────────────────────────────────────────────────────
 // Devuelve el componente correcto según el rol y la vista actual
-function RouteView({ user, currentView, onNavigate, showToast }) {
+function RouteView({ user, currentView, onNavigate, showToast, globalState }) {
   const props = { user, onNavigate, showToast };
 
   // Super Admin routes
   if (user.role === 'superadmin') {
-    if (currentView === 'dashboard') return <SuperAdminDashboard {...props} />;
-    if (currentView === 'staff') return <StaffManagement {...props} />;
-    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
-    if (currentView === 'appointments') return <CalendarView {...props} />;
+    if (currentView === 'dashboard') return <SuperAdminDashboard {...props} staff={globalState.staff} appointments={globalState.appointments} />;
+    if (currentView === 'staff') return <StaffManagement {...props} staff={globalState.staff} setStaff={globalState.setStaff} />;
+    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} patients={globalState.patients} setPatients={globalState.setPatients} />;
+    if (currentView === 'appointments') return <CalendarView {...props} readOnly appointments={globalState.appointments} setAppointments={globalState.setAppointments} patients={globalState.patients} />;
     if (currentView === 'reports') return <ReportsPlaceholder />;
     if (currentView === 'settings') return <SettingsPlaceholder />;
   }
 
   // Recepción routes
   if (user.role === 'recepcion') {
-    if (currentView === 'dashboard') return <RecepcionDashboard {...props} />;
-    if (currentView === 'appointments') return <CalendarView {...props} />;
-    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
+    if (currentView === 'dashboard') return <RecepcionDashboard {...props} appointments={globalState.appointments} setAppointments={globalState.setAppointments} />;
+    if (currentView === 'appointments') return <CalendarView {...props} appointments={globalState.appointments} setAppointments={globalState.setAppointments} patients={globalState.patients} />;
+    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} patients={globalState.patients} setPatients={globalState.setPatients} />;
   }
 
   // Médico routes
   if (user.role === 'medico') {
-    if (currentView === 'dashboard') return <MedicoDashboard {...props} />;
-    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
-    if (currentView === 'history') return <PatientsView {...props} userRole={user.role} />;
+    if (currentView === 'dashboard') return <MedicoDashboard {...props} appointments={globalState.appointments} />;
+    if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} patients={globalState.patients} setPatients={globalState.setPatients} />;
+    if (currentView === 'history') return <PatientsView {...props} userRole={user.role} patients={globalState.patients} setPatients={globalState.setPatients} />;
     if (currentView === 'stats') return <ReportsPlaceholder />;
   }
 
@@ -90,7 +93,7 @@ function NotFound() {
 }
 
 // ─── Top Header Bar ──────────────────────────────────────────────────────────
-function TopBar({ user, currentView, onLogout }) {
+function TopBar({ user, currentView, onLogout, onToggleMobileMenu }) {
   const viewLabels = {
     dashboard: user.role === 'superadmin' ? 'Resumen General' : user.role === 'medico' ? 'Mis Citas' : 'Panel de Recepción',
     staff: 'Gestión de Personal',
@@ -103,9 +106,12 @@ function TopBar({ user, currentView, onLogout }) {
   };
 
   return (
-    <header className="flex items-center justify-between md:justify-end px-8 py-5 bg-transparent w-full">
+    <header className="flex items-center justify-between md:justify-end px-4 sm:px-8 py-5 bg-transparent w-full">
       {/* Mobile only brand */}
-      <div className="md:hidden flex items-center gap-2">
+      <div className="md:hidden flex items-center gap-3">
+        <button onClick={onToggleMobileMenu} className="text-hav-text-main hover:text-hav-primary p-1 focus:outline-none">
+          <Menu size={24} />
+        </button>
         <p className="font-display font-bold text-hav-primary text-lg">HAV Portal</p>
       </div>
 
@@ -135,6 +141,12 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);   // null = not logged in
   const [currentView, setCurrentView] = useState('dashboard');
   const [toast, setToast] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // ── Global state — única fuente de verdad ──
+  const [patients, setPatients] = useState(PATIENTS);
+  const [appointments, setAppointments] = useState(APPOINTMENTS);
+  const [staff, setStaff] = useState(STAFF);
 
   const showToast = useCallback((t) => {
     setToast(t);
@@ -153,6 +165,7 @@ export default function App() {
 
   const navigate = (view) => {
     setCurrentView(view);
+    setIsMobileMenuOpen(false);
   };
 
   // ── Not authenticated ──
@@ -165,23 +178,42 @@ export default function App() {
     );
   }
 
+  // Bundle global state para pasar a las vistas
+  const globalState = { patients, setPatients, appointments, setAppointments, staff, setStaff };
+
   // ── Authenticated layout ──
   return (
-    <div className="flex min-h-screen bg-hav-bg">
+    <div className="flex min-h-screen bg-hav-bg relative">
       <Sidebar
         user={currentUser}
         currentView={currentView}
         onNavigate={navigate}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar user={currentUser} currentView={currentView} onLogout={handleLogout} />
+        <TopBar 
+          user={currentUser} 
+          currentView={currentView} 
+          onLogout={handleLogout} 
+          onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+        />
         <main className="flex-1 overflow-auto">
           <RouteView
             user={currentUser}
             currentView={currentView}
             onNavigate={navigate}
             showToast={showToast}
+            globalState={globalState}
           />
         </main>
       </div>

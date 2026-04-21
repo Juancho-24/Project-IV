@@ -3,6 +3,13 @@
 // Simula el backend completo. Conectar a Supabase en Fase 2.
 // ============================================================
 
+// Fechas dinámicas basadas en la fecha actual del sistema
+const _today = new Date().toISOString().slice(0, 10);
+const _yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+const _twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+const _oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+const _tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
 export const USERS = [
   {
     id: 'u1',
@@ -47,7 +54,7 @@ export const PATIENTS = [
     status: 'activo',
     bloodType: 'O+',
     insurance: 'PDVSA · Póliza Oro',
-    lastVisit: '2024-10-01',
+    lastVisit: _twoDaysAgo,
     doctor: 'Dr. Ricardo Pérez',
     specialty: 'Cardiología',
     vitalSigns: { bp: '120/80', hr: 72, temp: 36.5, spo2: 98, weight: 82, bmi: 24.5 },
@@ -65,7 +72,7 @@ export const PATIENTS = [
     status: 'activo',
     bloodType: 'A+',
     insurance: 'Seguros Caracas',
-    lastVisit: '2024-10-03',
+    lastVisit: _yesterday,
     doctor: 'Dr. Ricardo Pérez',
     specialty: 'Cardiología',
     vitalSigns: { bp: '118/76', hr: 68, temp: 36.2, spo2: 99, weight: 62, bmi: 22.1 },
@@ -83,7 +90,7 @@ export const PATIENTS = [
     status: 'activo',
     bloodType: 'B-',
     insurance: 'Mercantil Seguros',
-    lastVisit: '2024-09-28',
+    lastVisit: _oneWeekAgo,
     doctor: 'Dr. Ricardo Pérez',
     specialty: 'Medicina Interna',
     vitalSigns: { bp: '140/90', hr: 88, temp: 37.1, spo2: 96, weight: 91, bmi: 28.3 },
@@ -101,7 +108,7 @@ export const PATIENTS = [
     status: 'pendiente',
     bloodType: 'AB+',
     insurance: 'Sin seguro',
-    lastVisit: '2024-10-04',
+    lastVisit: _today,
     doctor: 'Dra. Sofía Blanco',
     specialty: 'Ginecología',
     vitalSigns: { bp: '110/70', hr: 65, temp: 36.8, spo2: 99, weight: 55, bmi: 21.0 },
@@ -119,7 +126,7 @@ export const PATIENTS = [
     status: 'activo',
     bloodType: 'O-',
     insurance: 'PDVSA · Póliza Plata',
-    lastVisit: '2024-10-04',
+    lastVisit: _today,
     doctor: 'Dr. Luis Martínez',
     specialty: 'Medicina General',
     vitalSigns: { bp: '145/95', hr: 92, temp: 37.4, spo2: 95, weight: 98, bmi: 31.2 },
@@ -137,7 +144,7 @@ export const PATIENTS = [
     status: 'dado_de_alta',
     bloodType: 'A-',
     insurance: 'Seguros La Occidental',
-    lastVisit: '2024-09-20',
+    lastVisit: _oneWeekAgo,
     doctor: 'Dr. Ricardo Pérez',
     specialty: 'Cardiología',
     vitalSigns: { bp: '122/82', hr: 70, temp: 36.6, spo2: 98, weight: 68, bmi: 23.8 },
@@ -145,12 +152,12 @@ export const PATIENTS = [
 ];
 
 export const APPOINTMENTS = [
-  { id: 'a1', patientId: 'p1', patientName: 'Eduardo San Vicente', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: '2024-10-04', time: '08:00', status: 'confirmada', type: 'Control' },
-  { id: 'a2', patientId: 'p2', patientName: 'María Gabriela Díaz', doctor: 'Dra. Sofía Blanco', specialty: 'Ginecología', date: '2024-10-04', time: '09:30', status: 'confirmada', type: 'Consulta Nueva' },
-  { id: 'a3', patientId: 'p3', patientName: 'Roberto Castellanos', doctor: 'Dr. Luis Martínez', specialty: 'Medicina General', date: '2024-10-04', time: '10:00', status: 'en_espera', type: 'Control' },
-  { id: 'a4', patientId: 'p4', patientName: 'Lucía Méndez', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: '2024-10-04', time: '11:00', status: 'confirmada', type: 'Control' },
-  { id: 'a5', patientId: 'p5', patientName: 'Carlos Eduardo Méndez', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: '2024-10-05', time: '08:30', status: 'pendiente', type: 'Primera Vez' },
-  { id: 'a6', patientId: 'p6', patientName: 'Ana Cristina Silva', doctor: 'Dra. Sofía Blanco', specialty: 'Ginecología', date: '2024-10-05', time: '09:00', status: 'pendiente', type: 'Control' },
+  { id: 'a1', patientId: 'p1', patientName: 'Eduardo San Vicente', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: _today, time: '08:00', status: 'confirmada', type: 'Control' },
+  { id: 'a2', patientId: 'p2', patientName: 'María Gabriela Díaz', doctor: 'Dra. Sofía Blanco', specialty: 'Ginecología', date: _today, time: '09:30', status: 'confirmada', type: 'Consulta Nueva' },
+  { id: 'a3', patientId: 'p3', patientName: 'Roberto Castellanos', doctor: 'Dr. Luis Martínez', specialty: 'Medicina General', date: _today, time: '10:00', status: 'en_espera', type: 'Control' },
+  { id: 'a4', patientId: 'p4', patientName: 'Lucía Méndez', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: _today, time: '11:00', status: 'confirmada', type: 'Control' },
+  { id: 'a5', patientId: 'p5', patientName: 'Carlos Eduardo Méndez', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología', date: _tomorrow, time: '08:30', status: 'pendiente', type: 'Primera Vez' },
+  { id: 'a6', patientId: 'p6', patientName: 'Ana Cristina Silva', doctor: 'Dra. Sofía Blanco', specialty: 'Ginecología', date: _tomorrow, time: '09:00', status: 'pendiente', type: 'Control' },
 ];
 
 export const STAFF = [
@@ -177,7 +184,7 @@ export const SOAP_TEMPLATE = {
 };
 
 export const CLINICAL_HISTORY = [
-  { id: 'h1', patientId: 'p1', date: '2024-09-01', doctor: 'Dr. Ricardo Pérez', diagnosis: 'Hipertensión arterial controlada', soap: { subjetivo: 'Paciente refiere cefalea ocasional', objetivo: 'TA 128/82, FC 74', analisis: 'Hipertensión leve, bajo control farmacológico', plan: 'Continuar Losartán 50mg, control en 4 semanas' }, status: 'cerrada' },
-  { id: 'h2', patientId: 'p1', date: '2024-07-15', doctor: 'Dr. Ricardo Pérez', diagnosis: 'Revisión cardiovascular anual', soap: { subjetivo: 'Paciente asintomático', objetivo: 'EKG normal, TA 120/78', analisis: 'Sin hallazgos patológicos', plan: 'Continuar medicación actual, próxima revisión en 6 meses' }, status: 'cerrada' },
-  { id: 'h3', patientId: 'p3', date: '2024-09-28', doctor: 'Dr. Luis Martínez', diagnosis: 'Diabetes Mellitus tipo 2, HTA', soap: { subjetivo: 'Polidipsia y poliuria en las últimas semanas', objetivo: 'Glucemia 185 mg/dL, TA 142/90', analisis: 'DM2 descompensada, HTA no controlada', plan: 'Ajuste de insulina, hipertensivo, dieta estricta' }, status: 'abierta' },
+  { id: 'h1', patientId: 'p1', date: _oneWeekAgo, doctor: 'Dr. Ricardo Pérez', diagnosis: 'Hipertensión arterial controlada', soap: { subjetivo: 'Paciente refiere cefalea ocasional', objetivo: 'TA 128/82, FC 74', analisis: 'Hipertensión leve, bajo control farmacológico', plan: 'Continuar Losartán 50mg, control en 4 semanas' }, status: 'cerrada' },
+  { id: 'h2', patientId: 'p1', date: _twoDaysAgo, doctor: 'Dr. Ricardo Pérez', diagnosis: 'Revisión cardiovascular anual', soap: { subjetivo: 'Paciente asintomático', objetivo: 'EKG normal, TA 120/78', analisis: 'Sin hallazgos patológicos', plan: 'Continuar medicación actual, próxima revisión en 6 meses' }, status: 'cerrada' },
+  { id: 'h3', patientId: 'p3', date: _oneWeekAgo, doctor: 'Dr. Luis Martínez', diagnosis: 'Diabetes Mellitus tipo 2, HTA', soap: { subjetivo: 'Polidipsia y poliuria en las últimas semanas', objetivo: 'Glucemia 185 mg/dL, TA 142/90', analisis: 'DM2 descompensada, HTA no controlada', plan: 'Ajuste de insulina, hipertensivo, dieta estricta' }, status: 'abierta' },
 ];

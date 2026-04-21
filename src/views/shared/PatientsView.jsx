@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Search, Plus, AlertTriangle, Heart, User, Phone, Calendar, X } from 'lucide-react';
-import { PATIENTS } from '../../data/mockData';
 
 const STATUS_STYLES = {
   activo: { bg: 'bg-green-100', text: 'text-green-700', label: 'Activo' },
@@ -8,8 +7,8 @@ const STATUS_STYLES = {
   dado_de_alta: { bg: 'bg-gray-100', text: 'text-hav-text-muted', label: 'Alta' },
 };
 
-export default function PatientsView({ showToast, userRole }) {
-  const [patients, setPatients] = useState(PATIENTS);
+// Recibe patients y setPatients como props desde App.jsx (fuente de verdad global)
+export default function PatientsView({ showToast, userRole, patients, setPatients }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,11 +46,11 @@ export default function PatientsView({ showToast, userRole }) {
           <h1 className="text-2xl font-display font-semibold text-hav-text-main/90 tracking-tight">Pacientes</h1>
           <p className="text-hav-text-muted text-sm mt-0.5">{patients.length} registros en el sistema</p>
         </div>
-        {(userRole === 'superadmin' || userRole === 'recepcion') && (
+        {userRole === 'recepcion' && (
           <button
             id="btn-add-patient"
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-hav-secondary hover:bg-hav-secondary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-hav-secondary/20"
+            className="flex items-center gap-2 bg-hav-primary hover:bg-hav-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-hav-primary/20"
           >
             <Plus size={16} /> Nuevo Paciente
           </button>
@@ -127,92 +126,92 @@ export default function PatientsView({ showToast, userRole }) {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn">
             <div className="overflow-y-auto w-full h-full">
               {/* Header */}
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-hav-primary text-white font-bold text-lg flex items-center justify-center">
-                    {selected.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-hav-primary text-white font-bold text-lg flex items-center justify-center">
+                      {selected.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-display font-bold text-hav-text-main">{selected.name}</h2>
+                      <p className="text-sm text-hav-text-muted">{selected.cedula} · {selected.age} años</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-display font-bold text-hav-text-main">{selected.name}</h2>
-                    <p className="text-sm text-hav-text-muted">{selected.cedula} · {selected.age} años</p>
+                  <button onClick={() => setSelected(null)} className="text-hav-text-muted hover:text-hav-text-main p-1">
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {/* Vital Signs */}
+                <div>
+                  <h3 className="text-sm font-semibold text-hav-text-muted uppercase tracking-wide mb-3">Signos Vitales</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'T/A', value: selected.vitalSigns.bp, unit: 'mmHg' },
+                      { label: 'F.C.', value: selected.vitalSigns.hr, unit: 'bpm' },
+                      { label: 'Temp.', value: selected.vitalSigns.temp, unit: '°C' },
+                      { label: 'SpO2', value: selected.vitalSigns.spo2, unit: '%' },
+                      { label: 'Peso', value: selected.vitalSigns.weight, unit: 'kg' },
+                      { label: 'IMC', value: selected.vitalSigns.bmi, unit: '' },
+                    ].map(({ label, value, unit }) => (
+                      <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-hav-text-muted mb-1">{label}</p>
+                        <p className="text-lg font-display font-bold text-hav-primary">{value}</p>
+                        <p className="text-[10px] text-hav-text-muted">{unit}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-hav-text-muted hover:text-hav-text-main p-1">
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
 
-            <div className="p-6 space-y-5">
-              {/* Vital Signs */}
-              <div>
-                <h3 className="text-sm font-semibold text-hav-text-muted uppercase tracking-wide mb-3">Signos Vitales</h3>
-                <div className="grid grid-cols-3 gap-3">
+                {/* Alergias */}
+                {selected.alergias.length > 0 && (
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-hav-danger flex items-center gap-1.5 mb-2">
+                      <AlertTriangle size={14} /> Alergias Registradas
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {selected.alergias.map((a) => (
+                        <span key={a} className="bg-white border border-red-200 text-hav-danger text-xs font-medium px-2 py-1 rounded-full">{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
-                    { label: 'T/A', value: selected.vitalSigns.bp, unit: 'mmHg' },
-                    { label: 'F.C.', value: selected.vitalSigns.hr, unit: 'bpm' },
-                    { label: 'Temp.', value: selected.vitalSigns.temp, unit: '°C' },
-                    { label: 'SpO2', value: selected.vitalSigns.spo2, unit: '%' },
-                    { label: 'Peso', value: selected.vitalSigns.weight, unit: 'kg' },
-                    { label: 'IMC', value: selected.vitalSigns.bmi, unit: '' },
-                  ].map(({ label, value, unit }) => (
-                    <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
-                      <p className="text-xs text-hav-text-muted mb-1">{label}</p>
-                      <p className="text-lg font-display font-bold text-hav-primary">{value}</p>
-                      <p className="text-[10px] text-hav-text-muted">{unit}</p>
+                    { l: 'Médico tratante', v: selected.doctor },
+                    { l: 'Especialidad', v: selected.specialty },
+                    { l: 'Tipo de sangre', v: selected.bloodType },
+                    { l: 'Seguro', v: selected.insurance },
+                    { l: 'Teléfono', v: selected.phone },
+                    { l: 'Correo', v: selected.email || '—' },
+                  ].map(({ l, v }) => (
+                    <div key={l}>
+                      <p className="text-xs text-hav-text-muted">{l}</p>
+                      <p className="font-medium text-hav-text-main mt-0.5">{v}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Alergias */}
-              {selected.alergias.length > 0 && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-                  <p className="text-sm font-semibold text-hav-danger flex items-center gap-1.5 mb-2">
-                    <AlertTriangle size={14} /> Alergias Registradas
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {selected.alergias.map((a) => (
-                      <span key={a} className="bg-white border border-red-200 text-hav-danger text-xs font-medium px-2 py-1 rounded-full">{a}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Info */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {[
-                  { l: 'Médico tratante', v: selected.doctor },
-                  { l: 'Especialidad', v: selected.specialty },
-                  { l: 'Tipo de sangre', v: selected.bloodType },
-                  { l: 'Seguro', v: selected.insurance },
-                  { l: 'Teléfono', v: selected.phone },
-                  { l: 'Correo', v: selected.email || '—' },
-                ].map(({ l, v }) => (
-                  <div key={l}>
-                    <p className="text-xs text-hav-text-muted">{l}</p>
-                    <p className="font-medium text-hav-text-main mt-0.5">{v}</p>
-                  </div>
-                ))}
+              <div className="px-6 pb-6">
+                <button
+                  onClick={() => setSelected(null)}
+                  className="w-full py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark transition-colors"
+                >
+                  Cerrar
+                </button>
               </div>
-            </div>
-
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => setSelected(null)}
-                className="w-full py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Add Patient Modal */}
-      {showAddModal && (
+      {userRole === 'recepcion' && showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fadeIn">
             <h2 className="text-lg font-display font-bold text-hav-text-main mb-5">Registrar Nuevo Paciente</h2>
@@ -253,7 +252,7 @@ export default function PatientsView({ showToast, userRole }) {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-hav-text-muted text-sm hover:bg-gray-50">Cancelar</button>
-              <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-hav-secondary text-white text-sm font-semibold hover:bg-hav-secondary-dark">Registrar</button>
+              <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark">Registrar</button>
             </div>
           </div>
         </div>

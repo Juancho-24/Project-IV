@@ -17,15 +17,18 @@ export default function LoginScreen({ onLogin, showToast }) {
 
     // Simula petición al backend · 1200ms de latencia
     setTimeout(() => {
-      const user = USERS.find(
-        (u) => u.email === email.trim() && u.password === password
-      );
-      if (user) {
-        showToast({ type: 'success', title: `Bienvenido, ${user.name}`, message: 'Sesión iniciada correctamente' });
-        onLogin(user);
-      } else {
-        setError('Credenciales incorrectas. Verifique su correo y contraseña.');
-        showToast({ type: 'error', title: 'Acceso denegado', message: 'Credenciales inválidas' });
+      try {
+        const user = USERS.find(
+          (u) => u.email === email.trim() && u.password === password
+        );
+        if (user) {
+          showToast({ type: 'success', title: `Bienvenido, ${user.name}`, message: 'Sesión iniciada correctamente' });
+          onLogin(user);
+        } else {
+          setError('Credenciales incorrectas. Verifique su correo y contraseña.');
+          showToast({ type: 'error', title: 'Acceso denegado', message: 'Credenciales inválidas' });
+        }
+      } finally {
         setIsLoading(false);
       }
     }, 1200);
@@ -36,8 +39,8 @@ export default function LoginScreen({ onLogin, showToast }) {
          style={{ background: 'linear-gradient(145deg, #1e4f5c 0%, #367281 55%, #4a8fa0 100%)' }}>
       
       {/* Animated Background Elements */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 blur-[100px]" style={{ background: '#66AB1A', transform: 'translate(30%, -30%)' }} />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-20 blur-[100px]" style={{ background: '#A1D95A', transform: 'translate(-40%, 40%)' }} />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 blur-[100px]" style={{ background: '#367281', transform: 'translate(30%, -30%)' }} />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-20 blur-[100px]" style={{ background: '#4a8fa0', transform: 'translate(-40%, 40%)' }} />
 
       <div className="relative z-10 w-full max-w-md px-6">
         

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Plus, X, CheckCircle } from 'lucide-react';
-import { APPOINTMENTS, PATIENTS } from '../../data/mockData';
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -21,14 +20,14 @@ function buildCalendar(year, month) {
   return cells;
 }
 
-export default function CalendarView({ showToast }) {
+// Recibe appointments, setAppointments y patients como props desde App.jsx (fuente de verdad global)
+export default function CalendarView({ showToast, appointments, setAppointments, patients, readOnly = false }) {
   const today = new Date();
   const [curYear, setCurYear] = useState(today.getFullYear());
   const [curMonth, setCurMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
-  const [appointments, setAppointments] = useState(APPOINTMENTS);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ patientId: PATIENTS[0].id, time: '08:00', type: 'Consulta Nueva', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología' });
+  const [form, setForm] = useState({ patientId: patients[0]?.id || '', time: '08:00', type: 'Consulta Nueva', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología' });
 
   const cells = buildCalendar(curYear, curMonth);
   const pad = (n) => String(n).padStart(2, '0');
@@ -46,7 +45,7 @@ export default function CalendarView({ showToast }) {
   };
 
   const handleAdd = () => {
-    const patient = PATIENTS.find((p) => p.id === form.patientId);
+    const patient = patients.find((p) => p.id === form.patientId);
     const newAppt = {
       id: `a${Date.now()}`,
       patientId: form.patientId,
@@ -80,13 +79,15 @@ export default function CalendarView({ showToast }) {
           <h1 className="text-2xl font-display font-bold text-hav-text-main">Calendario de Citas</h1>
           <p className="text-hav-text-muted text-sm mt-0.5">Gestión del flujo hospitalario</p>
         </div>
-        <button
-          id="btn-add-appointment"
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-hav-primary hover:bg-hav-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-hav-primary/20"
-        >
-          <Plus size={16} /> Nueva Cita
-        </button>
+        {!readOnly && (
+          <button
+            id="btn-add-appointment"
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-hav-primary hover:bg-hav-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-hav-primary/20"
+          >
+            <Plus size={16} /> Nueva Cita
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
@@ -184,7 +185,7 @@ export default function CalendarView({ showToast }) {
       </div>
 
       {/* Add Appointment Modal */}
-      {showModal && (
+      {!readOnly && showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fadeIn">
             <div className="flex items-center justify-between mb-5">
@@ -203,7 +204,7 @@ export default function CalendarView({ showToast }) {
                   onChange={(e) => setForm({ ...form, patientId: e.target.value })}
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none"
                 >
-                  {PATIENTS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

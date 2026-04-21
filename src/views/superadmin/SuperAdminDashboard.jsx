@@ -1,12 +1,7 @@
 import { Users, CalendarDays, TrendingUp, UserCheck, Activity, Clock } from 'lucide-react';
-import { PATIENTS, APPOINTMENTS, STAFF, RECENT_ACTIVITY } from '../../data/mockData';
+import { PATIENTS, RECENT_ACTIVITY } from '../../data/mockData';
 
-const STAT_CARDS = [
-  { label: 'Pacientes Atendidos Hoy', value: '1,284', delta: '+12%', icon: Users, color: 'bg-hav-primary' },
-  { label: 'Personal Activo', value: '342', delta: '+3', icon: UserCheck, color: 'bg-hav-secondary' },
-  { label: 'Citas Programadas', value: APPOINTMENTS.length, delta: 'hoy', icon: CalendarDays, color: 'bg-indigo-500' },
-  { label: 'Nuevos Registros', value: '12', delta: 'esta semana', icon: TrendingUp, color: 'bg-amber-500' },
-];
+
 
 const SPECIALTIES = [
   { name: 'Cardiología', count: 38, max: 50 },
@@ -23,8 +18,14 @@ const ROLE_LABELS = {
   medico: 'Médico',
 };
 
-export default function SuperAdminDashboard({ user, onNavigate, showToast }) {
-  const activeStaff = STAFF.filter((s) => s.status === 'activo');
+export default function SuperAdminDashboard({ user, onNavigate, showToast, staff, appointments }) {
+  const activeStaff = (staff || []).filter((s) => s.status === 'activo');
+  const STAT_CARDS = [
+    { label: 'Pacientes Atendidos Hoy', value: '1,284', delta: '+12%', icon: Users, color: 'bg-hav-primary' },
+    { label: 'Personal Activo', value: activeStaff.length, delta: `de ${(staff || []).length} totales`, icon: UserCheck, color: 'bg-hav-secondary' },
+    { label: 'Citas Programadas', value: (appointments || []).length, delta: 'registradas', icon: CalendarDays, color: 'bg-indigo-500' },
+    { label: 'Nuevos Registros', value: '12', delta: 'esta semana', icon: TrendingUp, color: 'bg-amber-500' },
+  ];
   const dateStr = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { AlertTriangle, Heart, FileText, Save, ChevronDown, ChevronUp } from 'lucide-react';
-import { PATIENTS, APPOINTMENTS, CLINICAL_HISTORY } from '../../data/mockData';
+import { AlertTriangle, FileText, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { PATIENTS, CLINICAL_HISTORY } from '../../data/mockData';
 import Spinner from '../../components/Spinner';
 
-const todayAppts = APPOINTMENTS.filter((a) => a.date === '2024-10-04').slice(0, 4);
-
-export default function MedicoDashboard({ user, showToast }) {
+// Recibe appointments como prop desde App.jsx (fuente de verdad global)
+export default function MedicoDashboard({ user, showToast, appointments }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayAppts = (appointments || []).filter((a) => a.date === today).slice(0, 4);
   const [selectedPatientId, setSelectedPatientId] = useState(PATIENTS[0].id);
   const [soap, setSoap] = useState({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
   const [saving, setSaving] = useState(false);
@@ -107,11 +108,11 @@ export default function MedicoDashboard({ user, showToast }) {
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { l: 'T/A', v: selectedPatient.vitalSigns.bp, u: 'mmHg', alert: false },
-                  { l: 'F.C.', v: selectedPatient.vitalSigns.hr, u: 'bpm', alert: selectedPatient.vitalSigns.hr > 90 },
-                  { l: 'Temp', v: selectedPatient.vitalSigns.temp, u: '°C', alert: selectedPatient.vitalSigns.temp > 37 },
-                  { l: 'SpO2', v: selectedPatient.vitalSigns.spo2, u: '%', alert: selectedPatient.vitalSigns.spo2 < 95 },
+                  { l: 'F.C.', v: selectedPatient.vitalSigns.hr, u: 'bpm', alert: Number(selectedPatient.vitalSigns.hr) > 90 },
+                  { l: 'Temp', v: selectedPatient.vitalSigns.temp, u: '°C', alert: Number(selectedPatient.vitalSigns.temp) > 37 },
+                  { l: 'SpO2', v: selectedPatient.vitalSigns.spo2, u: '%', alert: Number(selectedPatient.vitalSigns.spo2) < 95 },
                   { l: 'Peso', v: selectedPatient.vitalSigns.weight, u: 'kg', alert: false },
-                  { l: 'IMC', v: selectedPatient.vitalSigns.bmi, u: '', alert: selectedPatient.vitalSigns.bmi > 30 },
+                  { l: 'IMC', v: selectedPatient.vitalSigns.bmi, u: '', alert: Number(selectedPatient.vitalSigns.bmi) > 30 },
                 ].map(({ l, v, u, alert }) => (
                   <div key={l} className={`rounded-xl p-2.5 text-center ${alert ? 'bg-red-50' : 'bg-gray-50'}`}>
                     <p className="text-[10px] text-hav-text-muted">{l}</p>
