@@ -1,17 +1,25 @@
 import { useState } from 'react';
 import { CalendarDays, Users, Clock, CheckCircle, Plus } from 'lucide-react';
+import { updateAppointmentStatus } from '../../services/api';
 
 // Recibe appointments y setAppointments como props desde App.jsx (fuente de verdad global)
-export default function RecepcionDashboard({ user, onNavigate, showToast, appointments, setAppointments }) {
+export default function RecepcionDashboard({ user, onNavigate, showToast, appointments, setAppointments, refreshAppointments }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayAppts = appointments.filter((a) => a.date === today);
 
   const dateStr = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
-  const confirmAppt = (id) => {
-    setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status: 'confirmada' } : a));
-    showToast({ type: 'success', title: 'Cita confirmada', message: 'Estado actualizado en el sistema' });
+  const confirmAppt = async (id) => {
+    try {
+      await updateAppointmentStatus(id, 'confirmada');
+      showToast({ type: 'success', title: 'Cita confirmada', message: 'Estado actualizado en el sistema' });
+      if (refreshAppointments) await refreshAppointments();
+    } catch (err) {
+      // Fallback local
+      setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status: 'confirmada' } : a));
+      showToast({ type: 'success', title: 'Cita confirmada', message: 'Estado actualizado localmente' });
+    }
   };
 
   return (

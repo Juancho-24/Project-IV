@@ -1,42 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, FileText, Save, ChevronDown, ChevronUp } from 'lucide-react';
-import { PATIENTS, CLINICAL_HISTORY } from '../../data/mockData';
+import { fetchClinicalHistory, createClinicalHistory } from '../../services/api';
 import Spinner from '../../components/Spinner';
 
-// Recibe appointments como prop desde App.jsx (fuente de verdad global)
-export default function MedicoDashboard({ user, showToast, appointments }) {
+// Recibe appointments y patients como prop desde App.jsx (fuente de verdad global)
+export default function MedicoDashboard({ user, showToast, appointments, patients }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayAppts = (appointments || []).filter((a) => a.date === today).slice(0, 4);
-  const [selectedPatientId, setSelectedPatientId] = useState(PATIENTS[0].id);
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [soap, setSoap] = useState({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
   const [saving, setSaving] = useState(false);
-  const [savedHistory, setSavedHistory] = useState(CLINICAL_HISTORY);
+  const [savedHistory, setSavedHistory] = useState([]);
   const [expandedHistory, setExpandedHistory] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const selectedPatient = PATIENTS.find((p) => p.id === selectedPatientId);
-  const patientHistory = savedHistory.filter((h) => h.patientId === selectedPatientId);
+  // Auto-seleccionar primer paciente disponible
+  useEffect(() => {
+    if (!selectedPatientId && patients && patients.length > 0) {
+      setSelectedPatientId(patients[0].id);
+    }
+  }, [patients, selectedPatientId]);
 
-  const handleSaveSOAP = () => {
+  const selectedPatient = (patients || []).find((p) => p.id === selectedPatientId);
+
+  // Cargar historial clínico cuando cambia el paciente seleccionado
+  useEffect(() => {
+    if (!selectedPatientId) return;
+    let cancelled = false;
+    const loadHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const history = await fetchClinicalHistory(selectedPatientId);
+        if (!cancelled) setSavedHistory(history);
+      } catch {
+        if (!cancelled) setSavedHistory([]);
+      } finally {
+        if (!cancelled) setLoadingHistory(false);
+      }
+    };
+    loadHistory();
+    return () => { cancelled = true; };
+  }, [selectedPatientId]);
+
+  const patientHistory = savedHistory.filter((h) => h.patientId === selectedPatientId || h.patientId == selectedPatientId);
+
+  const handleSaveSOAP = async () => {
     if (!soap.subjetivo && !soap.objetivo) {
       showToast({ type: 'warning', title: 'SOAP incompleto', message: 'Ingrese al menos Subjetivo y Objetivo' });
       return;
     }
     setSaving(true);
-    setTimeout(() => {
-      const newRecord = {
-        id: `h${Date.now()}`,
+    try {
+      const newRecord = await createClinicalHistory({
         patientId: selectedPatientId,
-        date: new Date().toISOString().slice(0, 10),
-        doctor: user.name,
         diagnosis: soap.analisis || 'Pendiente diagnóstico',
         soap: { ...soap },
-        status: 'abierta',
-      };
+      });
       setSavedHistory((prev) => [newRecord, ...prev]);
       setSoap({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
-      setSaving(false);
       showToast({ type: 'success', title: '✅ Historia guardada', message: `Consulta de ${selectedPatient?.name} registrada` });
-    }, 1400);
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error al guardar', message: err.message || 'No se pudo guardar la historia clínica' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,31 +83,37 @@ export default function MedicoDashboard({ user, showToast, appointments }) {
           {/* Queue */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
             <h3 className="font-semibold text-hav-text-main mb-3 text-sm">Cola de Pacientes</h3>
-            <div className="space-y-2">
-              {todayAppts.map((a) => {
-                const patient = PATIENTS.find((p) => p.id === a.patientId);
-                const isSelected = patient?.id === selectedPatientId;
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => patient && setSelectedPatientId(patient.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                      isSelected
-                        ? 'bg-hav-primary text-white'
-                        : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
-                    }`}
-                  >
-                    <div className={`w-9 h-9 rounded-full font-bold text-xs flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-hav-primary text-white'}`}>
-                      {a.patientName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-hav-text-main'}`}>{a.patientName}</p>
-                      <p className={`text-xs truncate ${isSelected ? 'text-white/70' : 'text-hav-text-muted'}`}>{a.time} · {a.type}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            {todayAppts.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-hav-text-muted">
+                <p className="text-sm">No hay citas programadas para hoy</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {todayAppts.map((a) => {
+                  const patient = (patients || []).find((p) => p.id === a.patientId || p.id == a.patientId);
+                  const isSelected = patient?.id === selectedPatientId || patient?.id == selectedPatientId;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => patient && setSelectedPatientId(patient.id)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                        isSelected
+                          ? 'bg-hav-primary text-white'
+                          : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
+                      }`}
+                    >
+                      <div className={`w-9 h-9 rounded-full font-bold text-xs flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-hav-primary text-white'}`}>
+                        {a.patientName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-hav-text-main'}`}>{a.patientName}</p>
+                        <p className={`text-xs truncate ${isSelected ? 'text-white/70' : 'text-hav-text-muted'}`}>{a.time} · {a.type}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Patient Vitals Card */}
@@ -96,7 +129,7 @@ export default function MedicoDashboard({ user, showToast, appointments }) {
                 </div>
               </div>
 
-              {selectedPatient.alergias.length > 0 && (
+              {selectedPatient.alergias && selectedPatient.alergias.length > 0 && (
                 <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl p-3 mb-4">
                   <AlertTriangle size={14} className="text-hav-danger flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-hav-danger font-medium">
@@ -105,22 +138,24 @@ export default function MedicoDashboard({ user, showToast, appointments }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { l: 'T/A', v: selectedPatient.vitalSigns.bp, u: 'mmHg', alert: false },
-                  { l: 'F.C.', v: selectedPatient.vitalSigns.hr, u: 'bpm', alert: Number(selectedPatient.vitalSigns.hr) > 90 },
-                  { l: 'Temp', v: selectedPatient.vitalSigns.temp, u: '°C', alert: Number(selectedPatient.vitalSigns.temp) > 37 },
-                  { l: 'SpO2', v: selectedPatient.vitalSigns.spo2, u: '%', alert: Number(selectedPatient.vitalSigns.spo2) < 95 },
-                  { l: 'Peso', v: selectedPatient.vitalSigns.weight, u: 'kg', alert: false },
-                  { l: 'IMC', v: selectedPatient.vitalSigns.bmi, u: '', alert: Number(selectedPatient.vitalSigns.bmi) > 30 },
-                ].map(({ l, v, u, alert }) => (
-                  <div key={l} className={`rounded-xl p-2.5 text-center ${alert ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className="text-[10px] text-hav-text-muted">{l}</p>
-                    <p className={`text-base font-display font-bold ${alert ? 'text-hav-danger' : 'text-hav-primary'}`}>{v}</p>
-                    <p className="text-[10px] text-hav-text-muted">{u}</p>
-                  </div>
-                ))}
-              </div>
+              {selectedPatient.vitalSigns && (
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { l: 'T/A', v: selectedPatient.vitalSigns.bp, u: 'mmHg', alert: false },
+                    { l: 'F.C.', v: selectedPatient.vitalSigns.hr, u: 'bpm', alert: Number(selectedPatient.vitalSigns.hr) > 90 },
+                    { l: 'Temp', v: selectedPatient.vitalSigns.temp, u: '°C', alert: Number(selectedPatient.vitalSigns.temp) > 37 },
+                    { l: 'SpO2', v: selectedPatient.vitalSigns.spo2, u: '%', alert: Number(selectedPatient.vitalSigns.spo2) < 95 },
+                    { l: 'Peso', v: selectedPatient.vitalSigns.weight, u: 'kg', alert: false },
+                    { l: 'IMC', v: selectedPatient.vitalSigns.bmi, u: '', alert: Number(selectedPatient.vitalSigns.bmi) > 30 },
+                  ].map(({ l, v, u, alert }) => (
+                    <div key={l} className={`rounded-xl p-2.5 text-center ${alert ? 'bg-red-50' : 'bg-gray-50'}`}>
+                      <p className="text-[10px] text-hav-text-muted">{l}</p>
+                      <p className={`text-base font-display font-bold ${alert ? 'text-hav-danger' : 'text-hav-primary'}`}>{v}</p>
+                      <p className="text-[10px] text-hav-text-muted">{u}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -163,7 +198,11 @@ export default function MedicoDashboard({ user, showToast, appointments }) {
           </div>
 
           {/* Clinical History */}
-          {patientHistory.length > 0 && (
+          {loadingHistory ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-5 flex items-center justify-center py-10">
+              <Spinner size="md" />
+            </div>
+          ) : patientHistory.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
               <h3 className="font-semibold text-hav-text-main mb-3 text-sm">Historial Clínico</h3>
               <div className="space-y-2">
@@ -181,7 +220,7 @@ export default function MedicoDashboard({ user, showToast, appointments }) {
                     </button>
                     {expandedHistory === h.id && (
                       <div className="px-4 pb-4 border-t border-gray-50 space-y-2 bg-gray-50/50">
-                        {Object.entries(h.soap).map(([key, val]) => (
+                        {h.soap && Object.entries(h.soap).map(([key, val]) => (
                           val && (
                             <div key={key}>
                               <p className="text-[10px] font-bold text-hav-primary uppercase mt-2">{key}</p>

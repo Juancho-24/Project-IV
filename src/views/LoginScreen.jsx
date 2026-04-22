@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, LogIn, Shield, HeartPulse } from 'lucide-react';
-import { USERS } from '../data/mockData';
+import { loginUser, setToken } from '../services/api';
 import Spinner from '../components/Spinner';
 
 export default function LoginScreen({ onLogin, showToast }) {
@@ -10,28 +10,27 @@ export default function LoginScreen({ onLogin, showToast }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simula petición al backend · 1200ms de latencia
-    setTimeout(() => {
-      try {
-        const user = USERS.find(
-          (u) => u.email === email.trim() && u.password === password
-        );
-        if (user) {
-          showToast({ type: 'success', title: `Bienvenido, ${user.name}`, message: 'Sesión iniciada correctamente' });
-          onLogin(user);
-        } else {
-          setError('Credenciales incorrectas. Verifique su correo y contraseña.');
-          showToast({ type: 'error', title: 'Acceso denegado', message: 'Credenciales inválidas' });
-        }
-      } finally {
-        setIsLoading(false);
+    try {
+      const data = await loginUser(email.trim(), password);
+      if (data.success && data.token) {
+        setToken(data.token);
+        showToast({ type: 'success', title: `Bienvenido, ${data.user.name}`, message: 'Sesión iniciada correctamente' });
+        onLogin(data.user);
+      } else {
+        setError('Credenciales incorrectas. Verifique su correo y contraseña.');
+        showToast({ type: 'error', title: 'Acceso denegado', message: 'Credenciales inválidas' });
       }
-    }, 1200);
+    } catch (err) {
+      setError('Credenciales incorrectas. Verifique su correo y contraseña.');
+      showToast({ type: 'error', title: 'Acceso denegado', message: err.message || 'Credenciales inválidas' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -143,29 +142,6 @@ export default function LoginScreen({ onLogin, showToast }) {
               )}
             </button>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <p className="text-xs font-semibold text-hav-text-muted mb-3 flex items-center gap-1.5 justify-center">
-              <Shield size={14} /> Credenciales de demostración
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Admin', email: 'admin@hav.edu.ve', pass: 'admin123' },
-                { label: 'Recepción', email: 'recepcion@hav.edu.ve', pass: 'recepcion123' },
-                { label: 'Médico', email: 'medico@hav.edu.ve', pass: 'medico123' },
-              ].map(({ label, email: e, pass }) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => { setEmail(e); setPassword(pass); }}
-                  className="flex flex-col items-center justify-center gap-1 text-[10px] px-2 py-2 bg-gray-50 hover:bg-hav-primary/10 border border-gray-100 hover:border-hav-primary/30 rounded-lg transition-all text-center group"
-                >
-                  <span className="font-semibold text-gray-700 group-hover:text-hav-primary">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

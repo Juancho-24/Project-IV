@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Plus, X, CheckCircle } from 'lucide-react';
+import { createAppointment, updateAppointmentStatus } from '../../services/api';
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -21,13 +22,14 @@ function buildCalendar(year, month) {
 }
 
 // Recibe appointments, setAppointments y patients como props desde App.jsx (fuente de verdad global)
-export default function CalendarView({ showToast, appointments, setAppointments, patients, readOnly = false }) {
+export default function CalendarView({ showToast, appointments, setAppointments, patients, readOnly = false, refreshAppointments }) {
   const today = new Date();
   const [curYear, setCurYear] = useState(today.getFullYear());
   const [curMonth, setCurMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ patientId: patients[0]?.id || '', time: '08:00', type: 'Consulta Nueva', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología' });
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ patientId: patients?.[0]?.id || '', time: '08:00', type: 'Consulta Nueva', doctor: 'Dr. Ricardo Pérez', specialty: 'Cardiología' });
 
   const cells = buildCalendar(curYear, curMonth);
   const pad = (n) => String(n).padStart(2, '0');
@@ -44,27 +46,38 @@ export default function CalendarView({ showToast, appointments, setAppointments,
     else setCurMonth(m => m + 1);
   };
 
-  const handleAdd = () => {
-    const patient = patients.find((p) => p.id === form.patientId);
-    const newAppt = {
-      id: `a${Date.now()}`,
-      patientId: form.patientId,
-      patientName: patient?.name || 'Desconocido',
-      doctor: form.doctor,
-      specialty: form.specialty,
-      date: selectedDateStr,
-      time: form.time,
-      status: 'pendiente',
-      type: form.type,
-    };
-    setAppointments((prev) => [...prev, newAppt]);
-    setShowModal(false);
-    showToast({ type: 'success', title: '✅ Cita agendada con éxito', message: `${patient?.name} · ${form.time}` });
+  const handleAdd = async () => {
+    setSaving(true);
+    try {
+      const patient = patients.find((p) => p.id === form.patientId || p.id == form.patientId);
+      await createAppointment({
+        patientId: form.patientId,
+        doctor: form.doctor,
+        specialty: form.specialty,
+        date: selectedDateStr,
+        time: form.time,
+        type: form.type,
+      });
+      setShowModal(false);
+      showToast({ type: 'success', title: '✅ Cita agendada con éxito', message: `${patient?.name || 'Paciente'} · ${form.time}` });
+      if (refreshAppointments) await refreshAppointments();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const confirmAppt = (id) => {
-    setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status: 'confirmada' } : a));
-    showToast({ type: 'success', title: 'Cita confirmada', message: 'La cita fue confirmada exitosamente' });
+  const confirmAppt = async (id) => {
+    try {
+      await updateAppointmentStatus(id, 'confirmada');
+      showToast({ type: 'success', title: 'Cita confirmada', message: 'La cita fue confirmada exitosamente' });
+      if (refreshAppointments) await refreshAppointments();
+    } catch (err) {
+      // Fallback local
+      setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status: 'confirmada' } : a));
+      showToast({ type: 'success', title: 'Cita confirmada', message: 'Actualizado localmente' });
+    }
   };
 
   const hasAppt = (day) => {
@@ -204,7 +217,7 @@ export default function CalendarView({ showToast, appointments, setAppointments,
                   onChange={(e) => setForm({ ...form, patientId: e.target.value })}
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none"
                 >
-                  {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {(patients || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -233,7 +246,7 @@ export default function CalendarView({ showToast, appointments, setAppointments,
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-hav-text-muted text-sm hover:bg-gray-50">Cancelar</button>
-              <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark">Agendar</button>
+              <button onClick={handleAdd} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark disabled:opacity-70">{saving ? 'Agendando...' : 'Agendar'}</button>
             </div>
           </div>
         </div>

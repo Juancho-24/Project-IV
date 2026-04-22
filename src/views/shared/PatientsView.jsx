@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, AlertTriangle, Heart, User, Phone, Calendar, X } from 'lucide-react';
+import { createPatient } from '../../services/api';
 
 const STATUS_STYLES = {
   activo: { bg: 'bg-green-100', text: 'text-green-700', label: 'Activo' },
@@ -8,35 +9,40 @@ const STATUS_STYLES = {
 };
 
 // Recibe patients y setPatients como props desde App.jsx (fuente de verdad global)
-export default function PatientsView({ showToast, userRole, patients, setPatients }) {
+export default function PatientsView({ showToast, userRole, patients, setPatients, refreshPatients }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', cedula: '', age: '', phone: '', gender: 'Masculino', bloodType: 'O+', insurance: '' });
+  const [saving, setSaving] = useState(false);
 
   const filtered = patients.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.cedula.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!addForm.name || !addForm.cedula) return;
-    const newPatient = {
-      ...addForm,
-      id: `p${Date.now()}`,
-      alergias: [],
-      status: 'activo',
-      lastVisit: new Date().toISOString().slice(0, 10),
-      doctor: 'Sin asignar',
-      specialty: 'Sin asignar',
-      vitalSigns: { bp: '-', hr: '-', temp: '-', spo2: '-', weight: '-', bmi: '-' },
-      email: '',
-      dob: '',
-    };
-    setPatients((prev) => [...prev, newPatient]);
-    setAddForm({ name: '', cedula: '', age: '', phone: '', gender: 'Masculino', bloodType: 'O+', insurance: '' });
-    setShowAddModal(false);
-    showToast({ type: 'success', title: 'Paciente registrado', message: `${addForm.name} agregado al sistema` });
+    setSaving(true);
+    try {
+      await createPatient({
+        name: addForm.name,
+        cedula: addForm.cedula,
+        gender: addForm.gender,
+        phone: addForm.phone,
+        bloodType: addForm.bloodType,
+        insurance: addForm.insurance,
+        status: 'activo',
+      });
+      setAddForm({ name: '', cedula: '', age: '', phone: '', gender: 'Masculino', bloodType: 'O+', insurance: '' });
+      setShowAddModal(false);
+      showToast({ type: 'success', title: 'Paciente registrado', message: `${addForm.name} agregado al sistema` });
+      if (refreshPatients) await refreshPatients();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -252,7 +258,7 @@ export default function PatientsView({ showToast, userRole, patients, setPatient
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-hav-text-muted text-sm hover:bg-gray-50">Cancelar</button>
-              <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark">Registrar</button>
+              <button onClick={handleAdd} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark disabled:opacity-70">{saving ? 'Guardando...' : 'Registrar'}</button>
             </div>
           </div>
         </div>

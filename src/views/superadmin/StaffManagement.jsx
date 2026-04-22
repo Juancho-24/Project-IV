@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, MoreVertical, Pencil, Trash2, Mail, Badge, X } from 'lucide-react';
+import { createStaffMember, updateStaffMember, deleteStaffMember, toggleStaffStatus } from '../../services/api';
+import Spinner from '../../components/Spinner';
 
 const ROLE_LABELS = { recepcion: 'Recepción', enfermeria: 'Enfermería', administrativo: 'Administrativo', medico: 'Médico' };
 const STATUS_STYLES = {
@@ -8,18 +10,27 @@ const STATUS_STYLES = {
 };
 
 // Recibe staff y setStaff como props desde App.jsx (fuente de verdad global)
-export default function StaffManagement({ showToast, staff, setStaff }) {
+export default function StaffManagement({ showToast, staff, setStaff, refreshStaff }) {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', role: 'recepcion', status: 'activo' });
   const [editingStaff, setEditingStaff] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveEdit = () => {
-    const nameSnapshot = editingStaff.name;
-    setStaff((prev) => prev.map((s) => s.id === editingStaff.id ? editingStaff : s));
-    setEditingStaff(null);
-    showToast({ type: 'success', title: 'Cambios guardados', message: `El rol de ${nameSnapshot} fue actualizado.` });
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      await updateStaffMember(editingStaff.id, { role: editingStaff.role });
+      const nameSnapshot = editingStaff.name;
+      setEditingStaff(null);
+      showToast({ type: 'success', title: 'Cambios guardados', message: `El rol de ${nameSnapshot} fue actualizado.` });
+      if (refreshStaff) await refreshStaff();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filtered = staff.filter(
@@ -28,19 +39,42 @@ export default function StaffManagement({ showToast, staff, setStaff }) {
       s.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name || !form.email) return;
-    const newMember = { ...form, id: `s${Date.now()}`, since: new Date().toISOString().slice(0, 10) };
-    setStaff((prev) => [...prev, newMember]);
-    setForm({ name: '', email: '', role: 'recepcion', status: 'activo' });
-    setShowModal(false);
-    showToast({ type: 'success', title: 'Personal registrado', message: `${form.name} agregado al sistema` });
+    setSaving(true);
+    try {
+      await createStaffMember(form);
+      setForm({ name: '', email: '', role: 'recepcion', status: 'activo' });
+      setShowModal(false);
+      showToast({ type: 'success', title: 'Personal registrado', message: `${form.name} agregado al sistema` });
+      if (refreshStaff) await refreshStaff();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id, name) => {
-    setStaff((prev) => prev.filter((s) => s.id !== id));
-    setMenuOpen(null);
-    showToast({ type: 'warning', title: 'Miembro eliminado', message: `${name} fue removido del sistema` });
+  const handleDelete = async (id, name) => {
+    try {
+      await deleteStaffMember(id);
+      setMenuOpen(null);
+      showToast({ type: 'warning', title: 'Miembro eliminado', message: `${name} fue removido del sistema` });
+      if (refreshStaff) await refreshStaff();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Error', message: err.message });
+    }
+  };
+
+  const handleToggleStatus = async (s) => {
+    const newStatus = s.status === 'inactivo' ? 'activo' : 'inactivo';
+    try {
+      await toggleStaffStatus(s.id, newStatus);
+      if (refreshStaff) await refreshStaff();
+    } catch (err) {
+      // Fallback: actualizar localmente si la API falla
+      setStaff(prev => prev.map(member => member.id === s.id ? { ...member, status: newStatus } : member));
+    }
   };
 
   return (
@@ -103,20 +137,18 @@ export default function StaffManagement({ showToast, staff, setStaff }) {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-xs bg-hav-primary/10 text-hav-primary font-medium px-2 py-1 rounded-full">{ROLE_LABELS[s.role]}</span>
+                      <span className="text-xs bg-hav-primary/10 text-hav-primary font-medium px-2 py-1 rounded-full">{ROLE_LABELS[s.role] || s.role}</span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_STYLES[s.status]} ${s.status === 'inactivo' ? 'border border-red-200' : ''}`}>{s.status}</span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_STYLES[s.status] || ''} ${s.status === 'inactivo' ? 'border border-red-200' : ''}`}>{s.status}</span>
                     </td>
                     <td className="px-5 py-3.5 hidden md:table-cell text-sm text-hav-text-muted">
-                      {s.since || '15 Mar 2024'}
+                      {s.since || '—'}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-center">
                         <button
-                          onClick={() => {
-                            setStaff(prev => prev.map(member => member.id === s.id ? { ...member, status: member.status === 'inactivo' ? 'activo' : 'inactivo' } : member));
-                          }}
+                          onClick={() => handleToggleStatus(s)}
                           className={`w-10 h-[22px] rounded-full p-[2px] transition-colors duration-200 ease-in-out ${s.status === 'inactivo' ? 'bg-gray-200' : 'bg-green-500'}`}
                         >
                           <div className={`w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${s.status === 'inactivo' ? 'translate-x-0' : 'translate-x-[18px]'}`} />
@@ -218,9 +250,10 @@ export default function StaffManagement({ showToast, staff, setStaff }) {
                 </button>
                 <button
                   onClick={handleAdd}
-                  className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark transition-colors"
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white text-sm font-semibold hover:bg-hav-primary-dark transition-colors disabled:opacity-70"
                 >
-                  Agregar
+                  {saving ? 'Guardando...' : 'Agregar'}
                 </button>
               </div>
             </div>
@@ -255,7 +288,7 @@ export default function StaffManagement({ showToast, staff, setStaff }) {
                   <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100/50">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-hav-text-muted">Fecha de registro:</span>
-                      <span className="font-medium text-hav-text-main">{editingStaff.since || '15 Mar 2024'}</span>
+                      <span className="font-medium text-hav-text-main">{editingStaff.since || '—'}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-hav-text-muted">Estado actual:</span>
@@ -293,9 +326,10 @@ export default function StaffManagement({ showToast, staff, setStaff }) {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white font-semibold text-sm hover:bg-hav-primary-dark transition-colors shadow-md shadow-hav-primary/20"
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl bg-hav-primary text-white font-semibold text-sm hover:bg-hav-primary-dark transition-colors shadow-md shadow-hav-primary/20 disabled:opacity-70"
                 >
-                  Guardar Cambios
+                  {saving ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </div>

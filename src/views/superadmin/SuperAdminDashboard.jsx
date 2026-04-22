@@ -1,5 +1,12 @@
 import { Users, CalendarDays, TrendingUp, UserCheck, Activity, Clock } from 'lucide-react';
-import { PATIENTS, RECENT_ACTIVITY } from '../../data/mockData';
+
+// Actividad reciente estática (no hay endpoint dedicado aún)
+const RECENT_ACTIVITY = [
+  { id: 'r1', user: 'Marcos Arévalo', action: 'Registró cita', detail: 'Eduardo San Vicente · 08:00', time: 'hace 5 min', avatar: 'MA' },
+  { id: 'r2', user: 'Elena Rivas', action: 'Actualizó signos vitales', detail: 'Roberto Castellanos', time: 'hace 12 min', avatar: 'ER' },
+  { id: 'r3', user: 'Dr. Ricardo Pérez', action: 'Cerró consulta', detail: 'Ana Cristina Silva · SOAP', time: 'hace 30 min', avatar: 'RP' },
+  { id: 'r4', user: 'Juan Pérez', action: 'Procesó pago', detail: 'Lucía Méndez · Bs. 45.000', time: 'hace 45 min', avatar: 'JP' },
+];
 
 
 

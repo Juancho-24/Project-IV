@@ -12,5 +12,12 @@ export default defineConfig({
   server: {
     port: 5801,
     strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'https://hav-backend-0bxr.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 })
